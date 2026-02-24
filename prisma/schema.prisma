@@ -1,0 +1,165 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id String @id @default(cuid())
+  email String @unique
+  password String
+  name String
+  role String @default("DONOR")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  donorProfile DonorProfile?
+  recipientProfile RecipientProfile?
+  notifications Notification[]
+  sentMessages Message[] @relation("SentMessages")
+
+  @@map("users")
+}
+
+model DonorProfile {
+  id String @id @default(cuid())
+  userId String @unique
+  country String
+  organization String? 
+  stripeCustomerId String?
+  adoptions Adoption[]
+
+  user User @relation(fields:[userId], references: [id], onDelete: Cascade)
+
+  @@map("donor_profiles") 
+}
+
+model RecipientProfile {
+  id String @id @default(cuid())
+  userId String @unique
+  organization String
+  position String
+  phone String
+  stripeAccountId String?
+  stripeOnboarded Boolean @default(false)
+
+  user User @relation(fields:[userId], references: [id], onDelete: Cascade)
+  listings RHUListing[]
+
+  @@map("recipient_profiles")
+}
+
+model RHUListing {
+  id String @id @default(cuid())
+  recipientId String
+  rhuName String
+  description String
+  location String
+  province String
+  region String
+  imageUrl String?
+  status String @default("DRAFT")
+  validationNotes String?
+  validatedAt DateTime?
+  validatedBy String?
+  receiptInstructions String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  recipient RecipientProfile @relation(fields:[recipientId], references:[id], onDelete: Cascade)
+  adoptions Adoption[]
+  validations ListingValidation[]
+
+  @@map("rhu_listings")
+}
+
+model ListingValidation {
+  id String @id @default(cuid())
+  listingId String
+  adminId String
+  action String
+  notes String?
+  createdAt DateTime @default(now())
+
+  listing RHUListing @relation(fields:[listingId], references:[id], onDelete: Cascade)
+
+  @@map("listing_validations")
+}
+
+model Adoption {
+  id String @id @default(cuid())
+  donorId String
+  listingId String
+  isRecurring Boolean @default(false)
+  status String @default("ACTIVE")
+  stripeSubscriptionId String?
+  startedAt DateTime @default(now())
+  cancelledAt DateTime?
+  nextPaymentAt DateTime?
+
+  donor DonorProfile @relation(fields:[donorId], references:[id], onDelete: Cascade)
+  listing RHUListing @relation(fields:[listingId], references:[id], onDelete: Cascade)
+  donations Donation[]
+  messages Message[]
+
+  @@map("adoptions")
+}
+
+model Donation {
+  id String @id @default(cuid())
+  adoptionId String
+  amountCents Int
+  currency String @default("usd")
+  status String @default("PENDING")
+  stripeSessionId String? @unique
+  stripePaymentIntentId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  adoption Adoption @relation(fields:[adoptionId], references: [id], onDelete: Cascade)
+
+  @@map("donations")
+}
+
+model Message {
+  id String @id @default(cuid())
+  adoptionId String
+  senderId String
+  content String
+  isRead Boolean @default(false)
+  createdAt DateTime @default(now())
+
+  adoption Adoption @relation(fields:[adoptionId], references: [id], onDelete: Cascade)
+  sender User @relation("SentMessages", fields: [senderId], references: [id])
+
+  @@map("messages")
+}
+
+model Notification {
+  id String @id @default(cuid())
+  userId String
+  type String
+  title String
+  body String
+  isRead Boolean @default(false)
+  link String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("notifications")
+}
+
+model Setting {
+  key String @id
+  value String
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
