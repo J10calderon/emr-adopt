@@ -14,7 +14,9 @@ export default async function RecipientDashboard() {
             listings: {
                 include: {
                     _count: { select: { adoptions: { where: { status: "ACTIVE"} } } },
-                    donations: true,
+                    adoptions: {
+                        include: { donations: true },
+                    },
                 },
                 orderBy: { createdAt: "desc" },
             },
@@ -22,7 +24,7 @@ export default async function RecipientDashboard() {
     })
 
 
-    const totalReceived = profile?.listings.flatMap(l => l.donations).filter(d => d.status === "COMPLETED").reduce((sum, d) => sum + d.amountCents,0) ?? 0
+    const totalReceived = profile?.listings.flatMap(l => l.adoptions).flatMap(a => a.donations).filter(d => d.status === "COMPLETED").reduce((sum, d) => sum + d.amountCents,0) ?? 0
     const activeAdoptions = profile?.listings.reduce((sum, l) => sum + l._count.adoptions, 0) ?? 0
 
     return (

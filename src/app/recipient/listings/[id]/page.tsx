@@ -17,10 +17,13 @@ export default async function RecipientListingDetailPage({ params }: Props) {
         include: {
             recipient: true,
             adoptions: {
-                include: { donor : { include : { user: true } } },
+                include: {
+                     donor : { include : { user: true } },
+                     donations: true,
+                },
                 orderBy: { startedAt: "desc" },
             },
-            donations: true,
+            
         },
     })
 
@@ -29,7 +32,8 @@ export default async function RecipientListingDetailPage({ params }: Props) {
     //Make sure this listing belongs to the logged-in recipient
     if (listing.recipient.userId !== session!.user.id) notFound()
 
-    const totalReceived = listing.donations
+    const totalReceived = listing.adoptions
+        .flatMap(a => a.donations)
         .filter(d => d.status === "COMPLETED")
         .reduce((sum, d) => sum + d.amountCents,0)
 
