@@ -109,6 +109,7 @@ model Adoption {
   donations Donation[]
   messages Message[]
 
+  @@unique([donorId, listingId])
   @@map("adoptions")
 }
 

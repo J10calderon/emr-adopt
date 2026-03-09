@@ -79,11 +79,9 @@ export async function POST(req: Request) {
 
     await prisma.donation.create({
         data: {
-            donorId: session.user.id,
-            listingId,
+            adoptionId: adoption.id,
             amountCents,
             status: "PENDING",
-            isRecurring: false,
             stripeSessionId: checkoutSession.id,
         },
     })

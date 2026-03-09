@@ -1,7 +1,7 @@
 import { stripe } from "@/lib/stripe"
 import { prisma } from "@/lib/prisma"
 import { sendDonationConfirmationEmail, sendDonationReceivedEmail } from "@/lib/email"
-import { createNotification } from "@lib/notifications"
+import { createNotification } from "@/lib/notifications"
 import { NextResponse } from "next/server"
 
 export async function POST(req: Request) {
@@ -26,9 +26,11 @@ export async function POST(req: Request) {
         const donation = await prisma.donation.findFirst({
             where: { stripeSessionId: session.id },
             include: {
-                donor: true,
-                listing: {
-                    include: { recipient: { include: { user: true } } },
+                adoption: {
+                    include: {
+                        donor: { include: { user: true } },
+                        listing: { include: { recipient: { include: { user: true} } } },
+                    },
                 },
             },
         })
@@ -40,28 +42,28 @@ export async function POST(req: Request) {
             })
 
             await createNotification(
-                donation.donorId,
+                donation.adoption.donorId,
                 "DONATION_CONFIRMED",
-                `Your donation to ${donation.listing.rhuName} was successful!`
+                `Your donation to ${donation.adoption.listing.rhuName} was successful!`
             )
 
             await createNotification(
-                donation.listing.recipient.userId,
+                donation.adoption.listing.recipient.userId,
                 "DONATION_RECEIVED",
-                `You received a donation for ${donation.listing.rhuName}!`
+                `You received a donation for ${donation.adoption.listing.rhuName}!`
             )
 
             await sendDonationConfirmationEmail(
-                donation.donor.email,
-                donation.donor.name ?? "Donor",
-                donation.listing.rhuName,
+                donation.adoption.donor.user.email,
+                donation.adoption.donor.user.name ?? "Donor",
+                donation.adoption.listing.rhuName,
                 donation.amountCents
             )
             
             await sendDonationReceivedEmail(
-                donation.listing.recipient.user.email,
-                donation.listing.recipient.user.name ?? "Recipient",
-                donation.listing.rhuName,
+                donation.adoption.listing.recipient.user.email,
+                donation.adoption.listing.recipient.user.name ?? "Recipient",
+                donation.adoption.listing.rhuName,
                 donation.amountCents
             )
         }
