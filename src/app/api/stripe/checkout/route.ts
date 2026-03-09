@@ -25,6 +25,14 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Recipient not onboarded"}, { status: 400 })
     }
 
+    const donorProfile = await prisma.donorProfile.findUnique({
+        where: { userId: session.user.id },
+    })
+
+    if (!donorProfile){
+        return NextResponse.json({ error: "Donor profile not found" }, { status: 400})
+    }
+
     const setting = await prisma.setting.findUnique({
         where: { key: "donation_amount_cents" },
     })
@@ -35,11 +43,11 @@ export async function POST(req: Request) {
 
     const checkoutSession = await stripe.checkout.sessions.create({
         mode: "payment",
-        payment_intent_data: {
-            transfer_data: {
-                destination: listing.recipient.stripeAccountId,
-            },
-        },
+        // payment_intent_data: {
+        //     transfer_data: {
+        //         destination: listing.recipient.stripeAccountId,
+        //     },
+        // },
         line_items: [
             {
                 quantity: 1,
@@ -62,15 +70,15 @@ export async function POST(req: Request) {
         cancel_url: `${baseUrl}/donation/cancel?listing_id=${listingId}`,
     })
 
-    await prisma.adoption.upsert({
+    const adoption = await prisma.adoption.upsert({
         where: {
             donorId_listingId: {
-                donorId: session.user.id,
+                donorId: donorProfile.id,
                 listingId,
             },
         },
         create: {
-            donorId: session.user.id,
+            donorId: donorProfile.id,
             listingId,
             status: "ACTIVE",
         },
