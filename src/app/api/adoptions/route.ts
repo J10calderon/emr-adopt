@@ -9,14 +9,26 @@ export async function GET() {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401})
     }
 
+    const donorProfile = await prisma.donorProfile.findUnique({
+        where: { userId: session.user.id },
+    })
+
+    if (!donorProfile) {
+        return NextResponse.json({ error: "Donor profile not found" }, { status: 400})
+    }
+
+
     const adoptions = await prisma.adoption.findMany({
-        where: { donorId: session.user.id },
+        where: { donorId: donorProfile.id },
         include: {
             listing: {
-                include: { recipientProfile: true },
+                include: { recipient: true },
+            },
+            donations: {
+                orderBy: { createdAt: "desc" },
             },
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: { startedAt: "desc" },
     })
 
     return NextResponse.json(adoptions)

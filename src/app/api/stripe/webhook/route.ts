@@ -41,8 +41,17 @@ export async function POST(req: Request) {
                 data: { status: "COMPLETED" },
             })
 
+            // If recurring, store the subscription ID on the adoption
+            if (session.metadata?.isRecurring === "true" && session.subscription) {
+                await prisma.adoption.update({
+                    where: { id: donation.adoptionId },
+                    data: { stripeSubscriptionId: session.subscription as string },
+                })
+            }
+
+
             await createNotification(
-                donation.adoption.donorId,
+                donation.adoption.donor.userId,
                 "DONATION_CONFIRMED",
                 `Your donation to ${donation.adoption.listing.rhuName} was successful!`
             )
@@ -76,6 +85,118 @@ export async function POST(req: Request) {
             where: { stripeSessionId: session.id },
             data: { status: "FAILED" },
         })
+    }
+
+    if (event.type === "invoice.payment_succeeded") {
+        const invoice = event.data.object
+        const subscriptionId = invoice.subscription as string
+
+        //Skip the first invoice - thats already handled by checkout.session.completed
+        if (invoice.billing_reason === "subscription_create") {
+            return NextResponse.json({ received: true })
+        }
+
+        const adoption = await prisma.adoption.findFirst({
+            where: { stripeSubscriptionId: subscriptionId },
+            include: {
+                donor: { include: { user: true} },
+                listing: { include: { recipient: { include: { user: true} } } },
+            },
+        })
+
+        if (adoption) {
+            const amountCents = invoice.amount_paid
+
+            await prisma.donation.create({
+                data: {
+                    adoptionId: adoption.id,
+                    amountCents,
+                    status: "COMPLETED",
+                    stripePaymentIntentId: invoice.payment_intent as string,
+                },
+            })
+
+            await createNotification(
+                adoption.donor.userId,
+                "DONATION_CONFIRMED",
+                `Your monthly donation to ${adoption.listing.rhuName} was charged successfully.`
+            )
+
+            await createNotification(
+                adoption.listing.recipient.userId,
+                "DONATION_RECEIVED",
+                `You received a monthly donation for ${adoption.listing.rhuName}!`
+            )
+
+            await sendDonationConfirmationEmail(
+                adoption.donor.user.email,
+                adoption.donor.user.name ?? "Donor",
+                adoption.listing.rhuName,
+                amountCents
+            )
+
+            await sendDonationReceivedEmail(
+                adoption.listing.recipient.user.email,
+                adoption.listing.recipient.user.name ?? "Recipient",
+                adoption.listing.rhuName,
+                amountCents
+            )
+        }
+    }
+
+    if (event.type === "invoice.payment_failed") {
+        const invoice = event.data.object
+        const subscriptionId = invoice.subscription as string
+
+        const adoption = await prisma.adoption.findFirst({
+            where: { stripeSubscriptionId: subscriptionId },
+            include: {
+                donor: { include: { user: true} },
+                listing: true,
+            },
+        })
+
+        if (adoption) {
+            await createNotification(
+                adoption.donor.userId,
+                "PAYMENT_FAILED",
+                `Your monthly payment for ${adoption.listing.rhuName} failed. Please update your payment method.`
+            )
+        }
+    }
+
+    if (event.type === "customer.subscription.deleted") {
+        const subscription = event.data.object
+
+        const adoption = await prisma.adoption.findFirst({
+            where: { stripeSubscriptionId: subscription.id },
+            include: {
+                donor: { include: { user: true} },
+                listing: { include: { recipient: true } },
+            },
+        })
+
+        if (adoption) {
+            await prisma.adoption.update({
+                where: { id: adoption.id },
+                data: {
+                    status: "CANCELLED",
+                    cancelledAt: new Date(),
+                },
+            })
+
+            await createNotification(
+                adoption.donor.userId,
+                "ADOPTION_CANCELLED",
+                `Your monthly adoption of ${adoption.listing.rhuName} has been cancelled.`
+            )
+
+            await createNotification(
+                adoption.listing.recipient.userId,
+                "ADOPTION_CANCELLED",
+                `A monthly adoption of ${adoption.listing.rhuName} has been cancelled.`
+            )
+        }
     }
     return NextResponse.json({ received: true})
 }
