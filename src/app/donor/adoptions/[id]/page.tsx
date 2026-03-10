@@ -5,6 +5,7 @@ import { redirect, notFound } from "next/navigation"
 import Link from "next/link"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import CancelAdoptionButton from "./CancelAdoptionButton"
+import MessageThread from "@/components/messaging/MessageThread"
 
 export default async function AdoptionDetailPage({
     params,
@@ -104,7 +105,13 @@ export default async function AdoptionDetailPage({
                     ))}
                 </div>
             )}
-
+            <div className="mt-8">
+                <h2 className="text-lg font-semibold mb-3">Messages</h2>
+                <MessageThread
+                    adoptionId={adoption.id}
+                    currentUserId={session.user.id}
+                />
+            </div>
         </div>
     )
 }

@@ -6,6 +6,7 @@ import { ValidationBadge } from "@/components/rhu/ValidationBadge"
 import {formatCurrency, formatDate } from "@/lib/utils"
 import Link from "next/link"
 import { SubmitListingButton } from "./SubmitListingButton"
+import MessageThread from "@/components/messaging/MessageThread"
 
 type Props = { params: { id: string } }
 
@@ -106,21 +107,27 @@ export default async function RecipientListingDetailPage({ params }: Props) {
         {listing.adoptions.length > 0 && (
             <div className="bg-white border border-gray-200 rounded-xl p-6">
                 <h2 className="font-semibold text-gray-900 mb-4">Donors</h2>
-                <div className="space-y-2">
-                    {listing.adoptions.map((adoption)=> (
-                        <div key = {adoption.id} className="flex items-center justify-between text-sm">
-                            <span className="text-gray-900">{adoption.donor.user.name}</span>
-                            <div className="flex items-center gap-3">
-                                <span className="text-gray-500">{formatDate(adoption.startedAt)}</span>
-                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                adoption.status === "ACTIVE"
-                                ? "bg-green-100 text-green-800"
-                                : "bg-gray-100 text-gray-600"
-                                }`}>
-                                    {adoption.status}
-                                </span>
+                <div className="space-y-4">
+                    {listing.adoptions.map((adoption) => (
+                        <div key={adoption.id} className="border-b last:border-0 pb-4 last:pb-0">
+                            <div className="flex items-center justify-between text-sm mb-3">
+                                <span className="text-gray-900">{adoption.donor.user.name}</span>
+                                <div className="flex items-center gap-3">
+                                    <span className="text-gray-500">{formatDate(adoption.startedAt)}</span>
+                                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                        adoption.status === "ACTIVE"
+                                        ? "bg-green-100 text-green-800"
+                                        : "bg-gray-100 text-gray-600"
+                                    }`}>
+                                        {adoption.status}
+                                    </span>
+                                </div>
                             </div>
-                        </div>
+                        <MessageThread
+                            adoptionId={adoption.id}
+                            currentUserId={session!.user.id}
+                        />
+                        </div>  
                     ))}
                 </div>
             </div>
