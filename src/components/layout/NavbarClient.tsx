@@ -4,6 +4,7 @@ import Link from "next/link"
 import { signOut } from "next-auth/react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
+import NotificationBell from "@/components/messaging/NotificationBell"
 
 type User = {
     name: string
@@ -16,6 +17,8 @@ export function NavbarClient({user}: { user: User | null}){
 
     return (
         <div className="flex items-center gap-4">
+            {/* Notification bell */}
+            {user && <NotificationBell />}
             {/* Desktop nav */}
             <nav className="hidden md:flex items-center gap-4">
                 <Link href="/rhu" className="text-sm text-gray-600 hover:text-gray-900">Browse RHUs</Link>
