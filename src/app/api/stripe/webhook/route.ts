@@ -1,6 +1,6 @@
 import { stripe } from "@/lib/stripe"
 import { prisma } from "@/lib/prisma"
-import { sendDonationConfirmationEmail, sendDonationReceivedEmail } from "@/lib/email"
+import { sendDonationConfirmationEmail, sendDonationReceivedEmail, sendPaymentFailedEmail, sendAdoptionCancelledEmail } from "@/lib/email"
 import { createNotification } from "@/lib/notifications"
 import { NextResponse } from "next/server"
 
@@ -162,6 +162,11 @@ export async function POST(req: Request) {
                 "PAYMENT_FAILED",
                 `Your monthly payment for ${adoption.listing.rhuName} failed. Please update your payment method.`
             )
+            await sendPaymentFailedEmail(
+                adoption.donor.user.email,
+                adoption.donor.user.name ?? "Donor",
+                adoption.listing.rhuName
+            )
         }
     }
 
@@ -172,7 +177,7 @@ export async function POST(req: Request) {
             where: { stripeSubscriptionId: subscription.id },
             include: {
                 donor: { include: { user: true} },
-                listing: { include: { recipient: true } },
+                listing: { include: { recipient: { include: { user: true} } } },
             },
         })
 
@@ -195,6 +200,18 @@ export async function POST(req: Request) {
                 adoption.listing.recipient.userId,
                 "ADOPTION_CANCELLED",
                 `A monthly adoption of ${adoption.listing.rhuName} has been cancelled.`
+            )
+
+            await sendAdoptionCancelledEmail(
+                adoption.donor.user.email,
+                adoption.donor.user.name ?? "Donor",
+                adoption.listing.rhuName
+            )
+
+            await sendAdoptionCancelledEmail(
+                adoption.listing.recipient.user.email,
+                adoption.listing.recipient.user.name ?? "Recipient",
+                adoption.listing.rhuName
             )
         }
     }

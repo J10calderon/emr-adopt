@@ -3,13 +3,14 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { createNotification } from "@/lib/notifications"
 import { NextResponse } from "next/server"
+import { sendMessagesReceivedEmail } from "@/lib/email"
 
 async function getAccessContext(adoptionId: string, userId: string) {
     const adoption = await prisma.adoption.findUnique({
         where: { id: adoptionId },
         include: { 
-            donor: true,
-            listing: { include: { recipient: true} },
+            donor: {include: { user: true } },
+            listing: { include: { recipient: { include: { user: true } } } },
         },
     })
 
@@ -94,6 +95,18 @@ export async function POST(
         otherUserId,
         "MESSAGE_RECEIVED",
         `New message about ${adoption.listing.rhuName}: "${content.trim().slice(0, 60)}"`
+    )
+
+    const otherUser = isDonor
+        ? adoption.listing.recipient.user
+        : adoption.donor.user
+    const senderName = session.user.name ?? "Someone"
+
+    await sendMessagesReceivedEmail(
+        otherUser.email,
+        otherUser.name ?? "there",
+        senderName,
+        adoption.listing.rhuName
     )
 
     return NextResponse.json(message)

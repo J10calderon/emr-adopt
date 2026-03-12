@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { stripe } from "@/lib/stripe"
 import { createNotification } from "@/lib/notifications"
 import { NextResponse } from "next/server"
+import { sendAdoptionCancelledEmail } from "@/lib/email"
 
 export async function POST(
     req: Request,
@@ -17,9 +18,9 @@ export async function POST(
     const adoption = await prisma.adoption.findUnique({
         where: { id: params.id },
         include: {
-            donor: true,
+            donor: {include: { user: true} },
             listing: {
-                include: { recipient: true },
+                include: { recipient: { include: { user: true} } },
             },
         },
     })
@@ -58,6 +59,18 @@ export async function POST(
         adoption.listing.recipient.userId,
         "ADOPTION_CANCELLED",
         `A donor has cancelled their adoption of ${adoption.listing.rhuName}.`
+    )
+
+    await sendAdoptionCancelledEmail(
+        adoption.donor.user.email,
+        adoption.donor.user.name ?? "Donor",
+        adoption.listing.rhuName
+    )
+
+    await sendAdoptionCancelledEmail(
+        adoption.listing.recipient.user.email,
+        adoption.listing.recipient.user.name ?? "Recipient",
+        adoption.listing.rhuName
     )
 
     return NextResponse.json(updated)
