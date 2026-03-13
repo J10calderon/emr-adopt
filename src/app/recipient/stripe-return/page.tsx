@@ -52,7 +52,7 @@ export default async function StripeReturnPage() {
                         <Link href="/recipient/stripe-onboarding">Continue Onboarding</Link>
                     </Button>
                 </>
-            )
+            )}
         </div>
     )
 }

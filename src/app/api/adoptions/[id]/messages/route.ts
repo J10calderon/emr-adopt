@@ -94,6 +94,7 @@ export async function POST(
     await createNotification(
         otherUserId,
         "MESSAGE_RECEIVED",
+        "Message received",
         `New message about ${adoption.listing.rhuName}: "${content.trim().slice(0, 60)}"`
     )
 

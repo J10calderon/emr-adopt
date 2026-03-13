@@ -66,7 +66,7 @@ export default async function AdoptPage({ params }: Props) {
                 <CardContent className="space-y-2">
                     <div className="flex items-center gap-2 text-muted-foreground">
                         <MapPin className="h-4 w-4"/>
-                        <span>{listing.municipality}, {listing.province}</span>
+                        <span>{listing.location}, {listing.province}</span>
                     </div>
                     <p className="text-sm">{listing.description}</p>
                 </CardContent>

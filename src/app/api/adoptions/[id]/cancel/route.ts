@@ -52,12 +52,14 @@ export async function POST(
     await createNotification(
         session.user.id,
         "ADOPTION_CANCELLED",
+        "Adoption Cancelled",
         `You have cancelled your adoption of ${adoption.listing.rhuName}.`
     )
 
     await createNotification(
         adoption.listing.recipient.userId,
         "ADOPTION_CANCELLED",
+        "Adoption Cancelled",
         `A donor has cancelled their adoption of ${adoption.listing.rhuName}.`
     )
 

@@ -53,12 +53,14 @@ export async function POST(req: Request) {
             await createNotification(
                 donation.adoption.donor.userId,
                 "DONATION_CONFIRMED",
+                "Donation confirmed",
                 `Your donation to ${donation.adoption.listing.rhuName} was successful!`
             )
 
             await createNotification(
                 donation.adoption.listing.recipient.userId,
                 "DONATION_RECEIVED",
+                "Donation received",
                 `You received a donation for ${donation.adoption.listing.rhuName}!`
             )
 
@@ -89,7 +91,7 @@ export async function POST(req: Request) {
 
     if (event.type === "invoice.payment_succeeded") {
         const invoice = event.data.object
-        const subscriptionId = invoice.subscription as string
+        const subscriptionId = (invoice as any).subscription as string
 
         //Skip the first invoice - thats already handled by checkout.session.completed
         if (invoice.billing_reason === "subscription_create") {
@@ -112,19 +114,21 @@ export async function POST(req: Request) {
                     adoptionId: adoption.id,
                     amountCents,
                     status: "COMPLETED",
-                    stripePaymentIntentId: invoice.payment_intent as string,
+                    stripePaymentIntentId: (invoice as any).payment_intent as string,
                 },
             })
 
             await createNotification(
                 adoption.donor.userId,
                 "DONATION_CONFIRMED",
+                "Donation confirmed",
                 `Your monthly donation to ${adoption.listing.rhuName} was charged successfully.`
             )
 
             await createNotification(
                 adoption.listing.recipient.userId,
                 "DONATION_RECEIVED",
+                "Donation Received",
                 `You received a monthly donation for ${adoption.listing.rhuName}!`
             )
 
@@ -146,7 +150,7 @@ export async function POST(req: Request) {
 
     if (event.type === "invoice.payment_failed") {
         const invoice = event.data.object
-        const subscriptionId = invoice.subscription as string
+        const subscriptionId = (invoice as any).subscription as string
 
         const adoption = await prisma.adoption.findFirst({
             where: { stripeSubscriptionId: subscriptionId },
@@ -160,6 +164,7 @@ export async function POST(req: Request) {
             await createNotification(
                 adoption.donor.userId,
                 "PAYMENT_FAILED",
+                "Payment failed",
                 `Your monthly payment for ${adoption.listing.rhuName} failed. Please update your payment method.`
             )
             await sendPaymentFailedEmail(
@@ -193,12 +198,14 @@ export async function POST(req: Request) {
             await createNotification(
                 adoption.donor.userId,
                 "ADOPTION_CANCELLED",
+                "Adoption Cancelled",
                 `Your monthly adoption of ${adoption.listing.rhuName} has been cancelled.`
             )
 
             await createNotification(
                 adoption.listing.recipient.userId,
                 "ADOPTION_CANCELLED",
+                "Adoption Cancelled",
                 `A monthly adoption of ${adoption.listing.rhuName} has been cancelled.`
             )
 
